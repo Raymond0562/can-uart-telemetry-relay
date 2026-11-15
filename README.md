@@ -29,7 +29,7 @@ Each CAN message becomes a 14-byte UART frame:
 
 | File | Role |
 |---|---|
-| `formulaE_Design_project.c` | The relay: `Init()`, `Iter()`, and `RxCan()` |
+| `can-uart-telemetry-relay.c` | The relay: `Init()`, `Iter()`, and `RxCan()` |
 | `HAL.h` | Hardware abstraction layer the relay is written against (UART send, LED, CAN read) |
 
 The HAL functions are declared but not implemented here; they are provided by the
