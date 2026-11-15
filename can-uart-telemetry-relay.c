@@ -15,9 +15,8 @@ static volatile uint32_t write_index = 0;
 static volatile uint32_t read_index = 0;
 static bool led_red = true;
 
+// Runs once on startup
 void Init(){
-    // This function runs once on startup
-
     // Initializes the read and write indexes and sets the initial LED state to red
     write_index = 0;
     read_index = 0;
@@ -25,13 +24,9 @@ void Init(){
     led_red = true;
 }
 
+// Runs repeatedly from the main loop: drains the buffer and relays each
+// buffered CAN message over UART
 void Iter(){
-    // This function iterates quickly
-    // You can read CAN messages from the bus using 
-    // HAL_ReadCanMessage, which is how you
-    // pull a message from the bus, example 
-    // usage for getting the id and data.
-    
     while (read_index != write_index) {
         // Checks the state of the LED and changes it to green if it is red
         if (led_red) {
@@ -45,8 +40,8 @@ void Iter(){
         // Creates the header to the UART buffer
         uart_buffer[0] = 0xF5;
         uart_buffer[1] = 0xAE;
-        /* Converts the ID from little-endian to big-endian and adds it to the UART buffer
-           Works by shifting the bits, keeping the last 8 bits, then converting to a singly byte */
+        /* Adds the ID to the UART buffer in big-endian order (most significant byte first)
+           Works by shifting the bits, keeping the last 8 bits, then converting to a single byte */
         uart_buffer[2] = (uint8_t)((msg->id >> 24) & 0xFF);
         uart_buffer[3] = (uint8_t)((msg->id >> 16) & 0xFF);
         uart_buffer[4] = (uint8_t)((msg->id >> 8) & 0xFF);
@@ -65,19 +60,14 @@ void Iter(){
             led_red = true;
         }
     }
-    
 }
 
+// CAN receive interrupt handler, called once per received frame. It must stay
+// short, and HAL_ReadCanMessage is the only HAL function that is safe to call here
 void RxCan(){
-    // Called every time a CAN frame is received,
-    // using an interrupt. So you CANNOT call
-    // any HAL_* functions from here except
-    // HAL_ReadCanMessage, which is how you
-    // pull a message from the bus, example 
-    // usage for getting the id and data.
-
     // Checks if the buffer is full
-    if ((write_index + 1) % BufferSize == read_index) {
+    // (the indexes are free-running, so their unsigned difference is the fill level)
+    if ((uint32_t)(write_index - read_index) >= BufferSize) {
         // If the buffer is full, the program reads and discards the message
         uint8_t temp_data[CAN_LEN];
         uint32_t temp_id;
